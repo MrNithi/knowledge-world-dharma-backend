@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.810.21
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "knowledge-world-dharma-backend", "knowledge-world-dharma-backend\knowledge-world-dharma-backend.csproj", "{0D79DC8F-C683-41F3-8EC3-9B4FC0854FC3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0D79DC8F-C683-41F3-8EC3-9B4FC0854FC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0D79DC8F-C683-41F3-8EC3-9B4FC0854FC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0D79DC8F-C683-41F3-8EC3-9B4FC0854FC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0D79DC8F-C683-41F3-8EC3-9B4FC0854FC3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0AEF10AB-504E-4F6C-AC51-B1C268BA2B5C}
+	EndGlobalSection
+EndGlobal
