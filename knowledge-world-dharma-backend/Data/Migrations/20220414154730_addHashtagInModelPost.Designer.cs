@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using knowledge_world_dharma_backend.Data;
 
 namespace knowledge_world_dharma_backend.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20220414154730_addHashtagInModelPost")]
+    partial class addHashtagInModelPost
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -220,12 +222,6 @@ namespace knowledge_world_dharma_backend.Data.Migrations
 
                     b.Property<string>("Content")
                         .HasColumnType("TEXT");
-
-                    b.Property<string>("HashTag")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("HideStatus")
-                        .HasColumnType("INTEGER");
 
                     b.Property<int>("Ref")
                         .HasColumnType("INTEGER");

@@ -20,19 +20,16 @@ namespace knowledge_world_dharma_backend.Controllers
         {
             _context = context;
         }
-
         // GET: api/PostApi
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Post>>> GetPost()
         {
-
             var blogs = from b in _context.Post
                         where (b.Ref > 0)
                         select b;
             var data = await blogs.ToListAsync();
             return data;
         }
-
         // GET: api/PostApi/5
         [HttpGet("{Ref}")]
         public async Task<ActionResult<Post>> GetPost(int Ref)
@@ -45,7 +42,18 @@ namespace knowledge_world_dharma_backend.Controllers
 
             return post;
         }
+        // GET: api/PostApi/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Post>> GetPostId(int id)
+        {
+            var post = await _context.Post.FindAsync(id);
+            if (post == null)
+            {
+                return NotFound();
+            }
 
+            return post;
+        }
         // PUT: api/PostApi/5
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
@@ -54,6 +62,7 @@ namespace knowledge_world_dharma_backend.Controllers
         {
             if (id != post.Id)
             {
+                Console.WriteLine("error put");
                 return BadRequest();
             }
             _context.Entry(post).State = EntityState.Modified;
@@ -74,7 +83,7 @@ namespace knowledge_world_dharma_backend.Controllers
                 }
             }
 
-            return NoContent();
+            return Ok();
         }
 
         // POST: api/PostApi

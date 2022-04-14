@@ -25,21 +25,32 @@ namespace knowledge_world_dharma_backend.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Post>>> GetPost()
         {
-            return await _context.Post.ToListAsync();
+            var blogs = from b in _context.Post
+                        where (b.Ref == 0)
+                        select b;
+            var data = await blogs.ToListAsync();
+            return data;
         }
 
         // GET: api/PostApi/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Post>> GetPost(int id)
+        public async Task<ActionResult<IEnumerable<Post>>> GetPostid(int id)
         {
             var post = await _context.Post.FindAsync(id);
-
-            if (post == null)
+            var Comments = from b in _context.Post
+                       where (b.Ref == id)
+                       select b;
+            var data = await Comments.ToListAsync();
+            List<List<Post>> res = new List<List<Post>>();
+            List<Post> PostItem = new List<Post>();
+            PostItem.Add(post);
+            res.Add(PostItem);
+            res.Add(data);
+            if (post == null || data == null)
             {
                 return NotFound();
             }
-
-            return post;
+            return Ok(res);
         }
 
         // PUT: api/PostApi/5
@@ -71,7 +82,7 @@ namespace knowledge_world_dharma_backend.Controllers
                 }
             }
 
-            return NoContent();
+            return Ok();
         }
 
         // POST: api/PostApi
