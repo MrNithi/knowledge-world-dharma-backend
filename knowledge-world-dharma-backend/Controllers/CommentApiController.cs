@@ -32,27 +32,21 @@ namespace knowledge_world_dharma_backend.Controllers
         }
         // GET: api/PostApi/5
         [HttpGet("{Ref}")]
-        public async Task<ActionResult<Post>> GetPost(int Ref)
+        public async Task<ActionResult<IEnumerable<Post>>> GetPost(int Ref)
         {
-            var post = await _context.Post.FindAsync(Ref);
-            if (post == null)
-            {
-                return NotFound();
-            }
-
-            return post;
-        }
-        // GET: api/PostApi/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Post>> GetPostId(int id)
-        {
-            var post = await _context.Post.FindAsync(id);
-            if (post == null)
-            {
-                return NotFound();
-            }
-
-            return post;
+            var blogs = from b in _context.Post
+                        where (b.Ref > 0 && b.Ref == Ref)
+                        select b;
+            var RefComment = await blogs.ToListAsync();
+            return RefComment;
+            //var comment = from b in _context.Post
+            //           where (b.Id == Ref)
+            //            select b;
+            // var IdComment = await comment.ToListAsync();
+            // List<List<Post>> Res = new List<List<Post>>();
+            //Res.Add(IdComment);
+            // Res.Add(RefComment);
+            // return Ok(Res);
         }
         // PUT: api/PostApi/5
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
@@ -60,13 +54,12 @@ namespace knowledge_world_dharma_backend.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutPost(int id, Post post)
         {
-            if (id != post.Id)
+            if (id != post.Id || post.Ref == 0)
             {
                 Console.WriteLine("error put");
                 return BadRequest();
             }
             _context.Entry(post).State = EntityState.Modified;
-
             try
             {
                 await _context.SaveChangesAsync();
