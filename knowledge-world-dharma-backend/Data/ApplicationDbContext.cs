@@ -14,5 +14,6 @@ namespace knowledge_world_dharma_backend.Data
         {
         }
         public DbSet<knowledge_world_dharma_backend.Models.Post> Post { get; set; }
+        public DbSet<knowledge_world_dharma_backend.Models.Like> Like { get; set; }
     }
 }
