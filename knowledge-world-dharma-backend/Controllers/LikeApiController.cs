@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using knowledge_world_dharma_backend.Data;
 using knowledge_world_dharma_backend.Models;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace knowledge_world_dharma_backend.Controllers
 {
@@ -41,14 +43,14 @@ namespace knowledge_world_dharma_backend.Controllers
             return Ok(likes);
         }
 
-        // POST: api/PostApi
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
+        // POST: api/
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<Like>> LikeLike(Like like)
         {
+            var currentUser = GetCurrentUser();
             var query = await _context.Like
-               .FirstOrDefaultAsync(item => item.PostId == like.PostId && item.UserId == like.UserId);
+               .FirstOrDefaultAsync(item => item.PostId == like.PostId && item.UserId == currentUser.Id);
             if (query != null)
             {
                 return BadRequest();
@@ -60,10 +62,12 @@ namespace knowledge_world_dharma_backend.Controllers
 
         // DELETE: api/PostApi/5
         [HttpDelete]
+        [Authorize]
         public async Task<ActionResult<Like>> UnLike(Like like)
         {
+            var currentUser = GetCurrentUser();
             var unLike = await _context.Like
-               .FirstOrDefaultAsync(item => item.PostId == like.PostId && item.UserId == like.UserId);
+               .FirstOrDefaultAsync(item => item.PostId == like.PostId && item.UserId == currentUser.Id);
             if (unLike == null)
             {
                 return NotFound();
@@ -73,9 +77,24 @@ namespace knowledge_world_dharma_backend.Controllers
             return Ok();
         }
 
-        private bool PostExists(int id)
+        private UserModel GetCurrentUser()
         {
-            return _context.Like.Any(e => e.Id == id);
+            var identity = HttpContext.User.Identity as ClaimsIdentity;
+
+            if (identity != null)
+            {
+                var userClaims = identity.Claims;
+
+                return new UserModel
+                {
+                    Username = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value,
+                    EmailAddress = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Email)?.Value,
+                    GivenName = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.GivenName)?.Value,
+                    Surname = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Surname)?.Value,
+                    Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value
+                };
+            }
+            return null;
         }
     }
 }
