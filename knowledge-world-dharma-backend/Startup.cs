@@ -51,7 +51,6 @@ namespace knowledge_world_dharma_backend
                 });
             services.AddMvc();
             services.AddControllers();
-            services.AddControllersWithViews();
             services.AddRazorPages();
         }
 
