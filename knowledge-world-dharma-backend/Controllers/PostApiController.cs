@@ -7,8 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using knowledge_world_dharma_backend.Data;
 using knowledge_world_dharma_backend.Models;
-using Newtonsoft.Json;
 using System.Collections;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace knowledge_world_dharma_backend.Controllers
 {
@@ -24,6 +25,7 @@ namespace knowledge_world_dharma_backend.Controllers
         }
 
         // GET: api/PostApi
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Post>>> GetPost()
         {
@@ -56,6 +58,7 @@ namespace knowledge_world_dharma_backend.Controllers
         }
         // GET: api/PostApi/5
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<JsonResult>>> GetPostid(int id)
         {
             var post = await _context.Post.FindAsync(id);
@@ -78,9 +81,12 @@ namespace knowledge_world_dharma_backend.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<IActionResult> PutPost(int id, Post post)
         {
-            if (id != post.Id || post.Ref != 0)
+            var currentUser = GetCurrentUser();
+            // This is weird prob need check later
+            if (id != post.Id || post.Ref != 0 || currentUser.Id != post.UserId)
             {
                 return BadRequest();
             }
@@ -110,8 +116,11 @@ namespace knowledge_world_dharma_backend.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
-        public async Task<ActionResult<Post>> PostPost(Post post)
+        [Authorize]
+        public async Task<ActionResult<Post>> CreatePost(Post post)
         {
+            var currentUser = GetCurrentUser();
+            post.UserId = currentUser.Id;
             _context.Post.Add(post);
             await _context.SaveChangesAsync();
 
@@ -120,38 +129,64 @@ namespace knowledge_world_dharma_backend.Controllers
 
         // DELETE: api/PostApi/5
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<ActionResult<Post>> DeletePost(int id)
         {
             var post = await _context.Post.FindAsync(id);
-            var Comment = from b in _context.Post
-                           where (b.Ref == id )
-                           select b;
-            var Comments = await Comment.ToListAsync();
-            var Like = from b in _context.Like
+            var currentUser = GetCurrentUser();
+            if (post.UserId == currentUser.Id)
+            {
+                var Comment = from b in _context.Post
+                              where (b.Ref == id)
+                              select b;
+                var Comments = await Comment.ToListAsync();
+                var Like = from b in _context.Like
                            where (b.PostId == id)
                            select b;
-            var Likes = await Like.ToListAsync();
-            if (post == null)
-            {
-                return NotFound();
-            }
+                var Likes = await Like.ToListAsync();
+                if (post == null)
+                {
+                    return NotFound();
+                }
 
-            _context.Post.Remove(post);
-            foreach (Post aPost in Comments)
-            {
-                _context.Post.Remove(aPost);
-            }
-            foreach (Like aLike in Likes)
-            {
-                _context.Like.Remove(aLike);
-            }
-            await _context.SaveChangesAsync();
+                _context.Post.Remove(post);
+                foreach (Post aPost in Comments)
+                {
+                    _context.Post.Remove(aPost);
+                }
+                foreach (Like aLike in Likes)
+                {
+                    _context.Like.Remove(aLike);
+                }
+                await _context.SaveChangesAsync();
 
-            return post;
+                return post;
+            }
+            return BadRequest("Not your post!");
         }
         private bool PostExists(int id)
         {
             return _context.Post.Any(e => e.Id == id);
+        }
+
+        private UserModel GetCurrentUser()
+        {
+            var identity = HttpContext.User.Identity as ClaimsIdentity;
+
+            if (identity != null)
+            {
+                var userClaims = identity.Claims;
+
+                return new UserModel
+                {
+                    Username = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value,
+                    EmailAddress = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Email)?.Value,
+                    GivenName = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.GivenName)?.Value,
+                    Surname = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Surname)?.Value,
+                    Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value
+                };
+            }
+            return null;
         }
     }
 }
