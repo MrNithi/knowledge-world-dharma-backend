@@ -1,30 +1,35 @@
-﻿using knowledge_world_dharma_backend.Data;
-using knowledge_world_dharma_backend.Models;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
-using System;
-using System.IdentityModel.Tokens.Jwt;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Security.Claims;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using knowledge_world_dharma_backend.Data;
+using knowledge_world_dharma_backend.Models;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace knowledge_world_dharma_backend.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]/[action]")]
     [ApiController]
-    public class LoginController : ControllerBase
+    public class AuthController : ControllerBase
     {
         private IConfiguration _config;
         private ApplicationDbContext _context;
 
-        public LoginController(IConfiguration config, ApplicationDbContext context)
+        public AuthController(IConfiguration config, ApplicationDbContext context)
         {
             _context = context;
             _config = config;
         }
 
+        // POST /authenticate/login
         [AllowAnonymous]
         [HttpPost]
         public IActionResult Login([FromBody] UserLogin userLogin)
@@ -65,7 +70,6 @@ namespace knowledge_world_dharma_backend.Controllers
 
         private UserModel Authenticate(UserLogin userLogin)
         {
-            // var currentUser = UserConstants.Users.FirstOrDefault(o => o.Username.ToLower() == userLogin.Username.ToLower() && o.Password == userLogin.Password);
             var candidateUser = _context.UserModel.FirstOrDefault(
                 acc => acc.Username == userLogin.Username && acc.Password == userLogin.Password);
 
@@ -75,6 +79,26 @@ namespace knowledge_world_dharma_backend.Controllers
             }
 
             return null;
+        }
+
+        
+        // POST: authenticate/register
+
+        [AllowAnonymous]
+        [HttpPost]
+        public async Task<IActionResult> Register([FromBody] UserModel userModel)
+        {
+            var candidateUser = _context.UserModel.FirstOrDefault(
+                acc => acc.Username == userModel.Username || acc.EmailAddress == userModel.EmailAddress);
+
+            if (candidateUser != null)
+            {
+                return BadRequest("Duplicate Username or Email!");
+            }
+            _context.UserModel.Add(userModel);
+            _ = await _context.SaveChangesAsync();
+
+            return CreatedAtAction("GetUserModel", new { id = userModel.Id }, userModel);
         }
     }
 }
