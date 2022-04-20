@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -15,5 +15,6 @@ namespace knowledge_world_dharma_backend.Data
         }
         public DbSet<knowledge_world_dharma_backend.Models.Post> Post { get; set; }
         public DbSet<knowledge_world_dharma_backend.Models.Like> Like { get; set; }
+        public DbSet<knowledge_world_dharma_backend.Models.UserModel> UserModel { get; set; }
     }
 }

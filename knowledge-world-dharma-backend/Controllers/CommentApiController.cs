@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using knowledge_world_dharma_backend.Data;
 using knowledge_world_dharma_backend.Models;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace knowledge_world_dharma_backend.Controllers
 {
@@ -30,6 +32,7 @@ namespace knowledge_world_dharma_backend.Controllers
             var data = await blogs.ToListAsync();
             return data;
         }
+
         // GET: api/PostApi/5
         [HttpGet("{Ref}")]
         public async Task<ActionResult<IEnumerable<Post>>> GetPost(int Ref)
@@ -39,21 +42,18 @@ namespace knowledge_world_dharma_backend.Controllers
                         select b;
             var RefComment = await blogs.ToListAsync();
             return RefComment;
-            //var comment = from b in _context.Post
-            //           where (b.Id == Ref)
-            //            select b;
-            // var IdComment = await comment.ToListAsync();
-            // List<List<Post>> Res = new List<List<Post>>();
-            //Res.Add(IdComment);
-            // Res.Add(RefComment);
-            // return Ok(Res);
         }
+
         // PUT: api/PostApi/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPut("{id}")]
         public async Task<IActionResult> PutPost(int id, Post post)
         {
+            var currentUser = GetCurrentUser();
+            var _post = await _context.Post.FindAsync(id);
+            if (currentUser.Id != _post.UserId)
+            {
+                return BadRequest("Not owner of the post!");
+            }
             if (id != post.Id || post.Ref == 0)
             {
                 Console.WriteLine("error put");
@@ -80,11 +80,12 @@ namespace knowledge_world_dharma_backend.Controllers
         }
 
         // POST: api/PostApi
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
+        [Authorize]
         public async Task<ActionResult<Post>> PostPost(Post post)
         {
+            var currentUser = GetCurrentUser();
+            post.UserId = currentUser.Id;
             _context.Post.Add(post);
             await _context.SaveChangesAsync();
 
@@ -93,10 +94,12 @@ namespace knowledge_world_dharma_backend.Controllers
 
         // DELETE: api/PostApi/5
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<ActionResult<Post>> DeletePost(int id)
         {
             var post = await _context.Post.FindAsync(id);
-            if (post == null)
+            var currentUser = GetCurrentUser();
+            if (post == null || currentUser.Id != post.UserId)
             {
                 return NotFound();
             }
@@ -110,6 +113,26 @@ namespace knowledge_world_dharma_backend.Controllers
         private bool PostExists(int id)
         {
             return _context.Post.Any(e => e.Id == id);
+        }
+
+        private UserModel GetCurrentUser()
+        {
+            var identity = HttpContext.User.Identity as ClaimsIdentity;
+
+            if (identity != null)
+            {
+                var userClaims = identity.Claims;
+
+                return new UserModel
+                {
+                    Username = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value,
+                    EmailAddress = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Email)?.Value,
+                    GivenName = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.GivenName)?.Value,
+                    Surname = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Surname)?.Value,
+                    Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value
+                };
+            }
+            return null;
         }
     }
 }
