@@ -29,7 +29,24 @@ namespace knowledge_world_dharma_backend.Controllers
             _config = config;
         }
 
-        // POST /authenticate/login
+        // GET /auth/profile
+        [Authorize]
+        [HttpGet]
+        public IActionResult Profile()
+        {
+            var currentUser = GetCurrentUser();
+
+            return Ok(new
+            {
+                    currentUser.Username,
+                    currentUser.EmailAddress,
+                    currentUser.Role,
+                    currentUser.GivenName,
+                    currentUser.Surname
+            });
+        }
+
+        // POST /auth/login
         [AllowAnonymous]
         [HttpPost]
         public IActionResult Login([FromBody] UserLogin userLogin)
@@ -43,6 +60,43 @@ namespace knowledge_world_dharma_backend.Controllers
             }
 
             return NotFound("User not found");
+        }
+
+        // POST: auth/register
+        [AllowAnonymous]
+        [HttpPost]
+        public async Task<IActionResult> Register([FromBody] UserModel userModel)
+        {
+            if (userModel.Username == null
+                || userModel.Password == null
+                || userModel.EmailAddress == null)
+            {
+                return BadRequest("Not enough body!");
+            }
+
+            var candidateUser = _context.UserModel.FirstOrDefault(
+                acc => acc.Username == userModel.Username || acc.EmailAddress == userModel.EmailAddress);
+
+            if (candidateUser != null)
+            {
+                return BadRequest("Duplicate Username or Email!");
+            }
+
+            var storedUser = new UserModel
+            {
+                EmailAddress = userModel.EmailAddress,
+                Username = userModel.Username,
+                Password = sha256(userModel.Password),
+                Role = "user", // Default
+                GivenName = userModel.GivenName,
+                Surname = userModel.Surname
+            };
+            _context.UserModel.Add(storedUser);
+            _ = await _context.SaveChangesAsync();
+
+            var token = Generate(storedUser);
+
+            return CreatedAtAction("Token", token);
         }
 
         private string Generate(UserModel user)
@@ -81,39 +135,24 @@ namespace knowledge_world_dharma_backend.Controllers
             return null;
         }
 
-        
-        // POST: authenticate/register
-        [AllowAnonymous]
-        [HttpPost]
-        public async Task<IActionResult> Register([FromBody] UserModel userModel)
+        private UserModel GetCurrentUser()
         {
-            if (userModel.Username == null
-                || userModel.Password == null
-                || userModel.EmailAddress == null)
+            var identity = HttpContext.User.Identity as ClaimsIdentity;
+
+            if (identity != null)
             {
-                return BadRequest("Not enough body!");
+                var userClaims = identity.Claims;
+
+                return new UserModel
+                {
+                    Username = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value,
+                    EmailAddress = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Email)?.Value,
+                    GivenName = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.GivenName)?.Value,
+                    Surname = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Surname)?.Value,
+                    Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value
+                };
             }
-
-            var candidateUser = _context.UserModel.FirstOrDefault(
-                acc => acc.Username == userModel.Username || acc.EmailAddress == userModel.EmailAddress);
-
-            if (candidateUser != null)
-            {
-                return BadRequest("Duplicate Username or Email!");
-            }
-            
-            var storedUser = new UserModel {
-                EmailAddress = userModel.EmailAddress,
-                Username = userModel.Username,
-                Password = sha256(userModel.Password),
-                Role = "user", // Default
-                GivenName = userModel.GivenName,
-                Surname = userModel.Surname
-            };
-            _context.UserModel.Add(storedUser);
-            _ = await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetUserModel", new { id = userModel.Id });
+            return null;
         }
 
         // Helper Hashing function
