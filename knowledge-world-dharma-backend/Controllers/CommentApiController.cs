@@ -122,6 +122,8 @@ namespace knowledge_world_dharma_backend.Controllers
             if (identity != null)
             {
                 var userClaims = identity.Claims;
+                var Username = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value;
+                var Id = _context.UserModel.FirstOrDefault(u => u.Username == Username).Id;
 
                 return new UserModel
                 {
@@ -129,7 +131,8 @@ namespace knowledge_world_dharma_backend.Controllers
                     EmailAddress = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Email)?.Value,
                     GivenName = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.GivenName)?.Value,
                     Surname = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Surname)?.Value,
-                    Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value
+                    Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value,
+                    Id = Id
                 };
             }
             return null;

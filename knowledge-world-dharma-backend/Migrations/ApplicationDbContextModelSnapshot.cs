@@ -246,6 +246,9 @@ namespace knowledge_world_dharma_backend.Migrations
                     b.Property<int>("Ref")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Title")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("UserId")
                         .HasColumnType("INTEGER");
 

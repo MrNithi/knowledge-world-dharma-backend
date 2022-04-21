@@ -9,8 +9,8 @@ using knowledge_world_dharma_backend.Data;
 namespace knowledge_world_dharma_backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20220420115755_initialCommit")]
-    partial class initialCommit
+    [Migration("20220421163818_AddTitle")]
+    partial class AddTitle
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -247,6 +247,9 @@ namespace knowledge_world_dharma_backend.Migrations
 
                     b.Property<int>("Ref")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("UserId")
                         .HasColumnType("INTEGER");
