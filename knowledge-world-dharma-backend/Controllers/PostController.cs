@@ -97,7 +97,7 @@ namespace knowledge_world_dharma_backend.Controllers
                 Post,
                 Comments,
                 Owner = Owner.Username,
-                PostLikes
+                Reacts = PostLikes
             });
         }
 

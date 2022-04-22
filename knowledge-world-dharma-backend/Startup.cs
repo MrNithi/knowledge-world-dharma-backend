@@ -20,6 +20,7 @@ namespace knowledge_world_dharma_backend
 {
     public class Startup
     {
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -49,6 +50,8 @@ namespace knowledge_world_dharma_backend
                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Jwt:Key"]))
                     };
                 });
+
+            services.AddCors();
             services.AddMvc();
             services.AddControllers();
             services.AddRazorPages();
@@ -72,6 +75,7 @@ namespace knowledge_world_dharma_backend
             app.UseStaticFiles();
 
             app.UseRouting();
+            app.UseCors(options => options.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 
             app.UseAuthentication();
             app.UseAuthorization();

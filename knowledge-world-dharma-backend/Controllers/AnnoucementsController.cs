@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using knowledge_world_dharma_backend.Data;
 using knowledge_world_dharma_backend.Models;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace knowledge_world_dharma_backend.Controllers
 {
@@ -23,63 +25,42 @@ namespace knowledge_world_dharma_backend.Controllers
 
         // GET: api/Annoucements
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Annoucement>>> GetAnnoucement()
+        public async Task<ActionResult<IEnumerable<object>>> GetAnnoucement()
         {
-            return await _context.Annoucement.ToListAsync();
-        }
-
-        // GET: api/Annoucements/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Annoucement>> GetAnnoucement(int id)
-        {
-            var annoucement = await _context.Annoucement.FindAsync(id);
-
-            if (annoucement == null)
+            var Annoucements = await _context.Annoucement.ToListAsync();
+            List<object> Response = new List<object>();
+            foreach (Annoucement Annoucement in Annoucements)
             {
-                return NotFound();
-            }
+                var _Post = await _context.Post.FindAsync(Annoucement.Post);
+                var Admin = await _context.UserModel.FindAsync(Annoucement.Admin);
 
-            return annoucement;
-        }
-
-        // PUT: api/Annoucements/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutAnnoucement(int id, Annoucement annoucement)
-        {
-            if (id != annoucement.Id)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(annoucement).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!AnnoucementExists(id))
+                Response.Add(new
                 {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                    Annoucement.Id,
+                    PostId = Annoucement.Post,
+                    Admin = Admin.Username,
+                    Post = _Post
+                });
             }
-
-            return NoContent();
+            return Response;
         }
 
-        // POST: api/Annoucements
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
-        [HttpPost]
-        public async Task<ActionResult<Annoucement>> PostAnnoucement(Annoucement annoucement)
+        // POST: api/annoucements
+        [HttpPost("{PostId}")]
+        [Authorize]
+        public async Task<ActionResult<Annoucement>> PostAnnoucement(int PostId)
         {
+            var CurrentUser = GetCurrentUser();
+
+            if (CurrentUser.Role != "Admin")
+            {
+                return BadRequest("You're not Admin!");
+            }
+            var annoucement = new Annoucement
+            {
+                 Post = PostId,
+                 Admin = CurrentUser.Id,
+            };
             _context.Annoucement.Add(annoucement);
             await _context.SaveChangesAsync();
 
@@ -90,6 +71,11 @@ namespace knowledge_world_dharma_backend.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<Annoucement>> DeleteAnnoucement(int id)
         {
+            var CurrentUser = GetCurrentUser();
+            if (CurrentUser.Role != "Admin")
+            {
+                return BadRequest("You're not Admin!");
+            }
             var annoucement = await _context.Annoucement.FindAsync(id);
             if (annoucement == null)
             {
@@ -102,9 +88,27 @@ namespace knowledge_world_dharma_backend.Controllers
             return annoucement;
         }
 
-        private bool AnnoucementExists(int id)
+        private UserModel GetCurrentUser()
         {
-            return _context.Annoucement.Any(e => e.Id == id);
+            var identity = HttpContext.User.Identity as ClaimsIdentity;
+
+            if (identity != null)
+            {
+                var userClaims = identity.Claims;
+                var Username = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value;
+                var Id = _context.UserModel.FirstOrDefault(u => u.Username == Username).Id;
+
+                return new UserModel
+                {
+                    Username = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value,
+                    EmailAddress = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Email)?.Value,
+                    GivenName = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.GivenName)?.Value,
+                    Surname = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Surname)?.Value,
+                    Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value,
+                    Id = Id
+                };
+            }
+            return null;
         }
     }
 }

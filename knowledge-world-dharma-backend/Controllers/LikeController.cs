@@ -58,19 +58,25 @@ namespace knowledge_world_dharma_backend.Controllers
             {
                 return BadRequest();
             }
-            _context.Like.Add(like);
+            var NewLike = new Like
+            {
+                PostId = like.PostId,
+                Emoji = like.Emoji,
+                UserId = currentUser.Id,
+            };
+            _context.Like.Add(NewLike);
             await _context.SaveChangesAsync();
             return CreatedAtAction("GetPost", new { id = like.Id }, like);
         }
 
         // DELETE: api/PostApi/5
-        [HttpDelete]
+        [HttpDelete("{id}")]
         [Authorize]
-        public async Task<ActionResult<Like>> UnLike(Like like)
+        public async Task<ActionResult<Like>> UnLike(int Id)
         {
             var currentUser = GetCurrentUser();
             var unLike = await _context.Like
-               .FirstOrDefaultAsync(item => item.PostId == like.PostId && item.UserId == currentUser.Id);
+               .FirstOrDefaultAsync(item => item.UserId == currentUser.Id && item.Id == Id);
             if (unLike == null)
             {
                 return NotFound();
