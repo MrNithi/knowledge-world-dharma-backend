@@ -29,6 +29,29 @@ namespace knowledge_world_dharma_backend.Controllers
             _config = config;
         }
 
+        // GET /auth/profiles
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<ActionResult> Profiles()
+        {
+            // Query for Post
+            var Users = await _context.UserModel.ToListAsync();
+            List<object> Res = new List<object>();
+
+            foreach (UserModel EachUser in Users)
+            {
+                Res.Add(new
+                {
+                    EachUser.Username,
+                    EachUser.EmailAddress,
+                    EachUser.Role,
+                    EachUser.GivenName,
+                    EachUser.Surname
+                });
+            }
+
+            return Ok(Res);
+        }
         // GET /auth/profile
         [Authorize]
         [HttpGet]
@@ -87,7 +110,7 @@ namespace knowledge_world_dharma_backend.Controllers
                 EmailAddress = userModel.EmailAddress,
                 Username = userModel.Username,
                 Password = sha256(userModel.Password),
-                Role = "user", // Default
+                Role = "User", // Default
                 GivenName = userModel.GivenName,
                 Surname = userModel.Surname
             };
@@ -99,6 +122,29 @@ namespace knowledge_world_dharma_backend.Controllers
             return CreatedAtAction("Token", token);
         }
 
+        // PUT /auth/setAdmin
+        [Authorize]
+        [HttpPut("{UserId}")]
+        public async Task<IActionResult> SetAdmin(int UserId)
+        {
+            var CurrentUser = GetCurrentUser();
+            var CandidateUser = await _context.UserModel.FindAsync(UserId);
+            
+            if (CurrentUser.Role != "Admin")
+            {
+                return NotFound("You have no right!");
+            }
+            
+
+            if (CandidateUser != null)
+            {
+                CandidateUser.Role = "Admin";
+                await _context.SaveChangesAsync();
+                return Ok("User " + CandidateUser.Username + " is setted as Admin!");
+            }
+
+            return NotFound("User not found");
+        }
         private string Generate(UserModel user)
         {
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));

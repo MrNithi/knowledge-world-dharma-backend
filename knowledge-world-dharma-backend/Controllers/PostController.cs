@@ -121,25 +121,29 @@ namespace knowledge_world_dharma_backend.Controllers
         {
             var currentUser = GetCurrentUser();
             var ExistedPost = await _context.Post.FindAsync(id);
-            if (currentUser.Id != ExistedPost.UserId)
+            if (!(currentUser.Id == ExistedPost.UserId || currentUser.Role == "Admin"))
             {
                 return BadRequest("Not your post!");
             }
 
             if (ExistedPost != null)
             {
-                if (post.Title != null)
+                if (currentUser.Id == ExistedPost.UserId)
                 {
-                    ExistedPost.Title = post.Title;
+                    if (post.Title != null)
+                    {
+                        ExistedPost.Title = post.Title;
+                    }
+                    if (post.Content != null)
+                    {
+                        ExistedPost.Content = post.Content;
+                    }
+                    if (post.HashTag != null)
+                    {
+                        ExistedPost.HashTag = post.HashTag;
+                    }
                 }
-                if (post.Content != null)
-                {
-                    ExistedPost.Content = post.Content;
-                }
-                if (post.HashTag != null)
-                {
-                    ExistedPost.HashTag = post.HashTag;
-                }
+                
                 if (post.HideStatus != 0)
                 {
                     if (post.HideStatus == -1)
@@ -184,7 +188,7 @@ namespace knowledge_world_dharma_backend.Controllers
             }
 
             var currentUser = GetCurrentUser();
-            if (post.UserId == currentUser.Id)
+            if (post.UserId == currentUser.Id || currentUser.Role == "Admin")
             {
                 _context.Post.Remove(post);
                 var QueryComments = from b in _context.Post
