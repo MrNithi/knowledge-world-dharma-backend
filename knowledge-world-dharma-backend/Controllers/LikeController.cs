@@ -14,24 +14,27 @@ namespace knowledge_world_dharma_backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class LikeApiController : ControllerBase
+    public class LikeController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
 
-        public LikeApiController(ApplicationDbContext context)
+        public LikeController(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        // GET: api/PostApi
+        // GET: api/like
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Like>>> GetLike()
+        [AllowAnonymous]
+        public async Task<ActionResult<IEnumerable<Like>>> GetLikes()
         {
             return await _context.Like.ToListAsync();
         }
 
-        // GET: api/PostApi/5
+        // GET: api/like/:id
+        // get like of post with id
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<ActionResult<Like>> GetLike(int id)
         {
             var data = from item in _context.Like where (item.PostId == id) select item;
@@ -43,7 +46,7 @@ namespace knowledge_world_dharma_backend.Controllers
             return Ok(likes);
         }
 
-        // POST: api/
+        // POST: api/like
         [Authorize]
         [HttpPost]
         public async Task<ActionResult<Like>> LikeLike(Like like)
@@ -84,6 +87,8 @@ namespace knowledge_world_dharma_backend.Controllers
             if (identity != null)
             {
                 var userClaims = identity.Claims;
+                var Username = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value;
+                var Id = _context.UserModel.FirstOrDefault(u => u.Username == Username).Id;
 
                 return new UserModel
                 {
@@ -91,7 +96,8 @@ namespace knowledge_world_dharma_backend.Controllers
                     EmailAddress = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Email)?.Value,
                     GivenName = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.GivenName)?.Value,
                     Surname = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Surname)?.Value,
-                    Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value
+                    Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value,
+                    Id = Id
                 };
             }
             return null;
