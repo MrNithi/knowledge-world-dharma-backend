@@ -42,6 +42,7 @@ namespace knowledge_world_dharma_backend.Controllers
             {
                 Res.Add(new
                 {
+                    EachUser.Id,
                     EachUser.Username,
                     EachUser.EmailAddress,
                     EachUser.Role,
@@ -59,14 +60,20 @@ namespace knowledge_world_dharma_backend.Controllers
         {
             var currentUser = GetCurrentUser();
 
-            return Ok(new
+            if (currentUser != null)
             {
+                return Ok(new
+                {
+                    currentUser.Id,
                     currentUser.Username,
                     currentUser.EmailAddress,
                     currentUser.Role,
                     currentUser.GivenName,
                     currentUser.Surname
-            });
+                });
+            }
+
+            return NotFound("No User with this ID!");
         }
 
         // POST /auth/login
@@ -145,6 +152,45 @@ namespace knowledge_world_dharma_backend.Controllers
 
             return NotFound("User not found");
         }
+
+        // DELETE: /auth/unregister
+        [HttpDelete]
+        [Authorize]
+        public async Task<ActionResult<Like>> Unregister()
+        {
+            var currentUser = GetCurrentUser();
+            var StoredUser = await _context.UserModel
+               .FirstOrDefaultAsync(item => item.Id == currentUser.Id);
+            if (StoredUser == null)
+            {
+                return NotFound();
+            }
+            _context.UserModel.Remove(StoredUser);
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
+
+        // DELETE: /auth/banish/:id
+        [HttpDelete("{id}")]
+        [Authorize]
+        public async Task<ActionResult> Banish(int Id)
+        {
+            var currentUser = GetCurrentUser();
+            if (currentUser.Role != "Admin")
+            {
+                return BadRequest("You're not admin!");
+            }
+            var StoredUser = await _context.UserModel
+               .FirstOrDefaultAsync(item => item.Id == Id);
+            if (StoredUser == null)
+            {
+                return NotFound();
+            }
+            _context.UserModel.Remove(StoredUser);
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
+
         private string Generate(UserModel user)
         {
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
@@ -189,7 +235,12 @@ namespace knowledge_world_dharma_backend.Controllers
             {
                 var userClaims = identity.Claims;
                 var Username = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value;
-                var Id = _context.UserModel.FirstOrDefault(u => u.Username == Username).Id;
+                var User = _context.UserModel.FirstOrDefault(u => u.Username == Username);
+
+                if (User == null)
+                {
+                    return null;
+                }
 
                 return new UserModel
                 {
@@ -198,7 +249,7 @@ namespace knowledge_world_dharma_backend.Controllers
                     GivenName = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.GivenName)?.Value,
                     Surname = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Surname)?.Value,
                     Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value,
-                    Id = Id
+                    Id = User.Id
                 };
             }
             return null;
