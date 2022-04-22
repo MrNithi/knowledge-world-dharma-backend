@@ -52,6 +52,10 @@ namespace knowledge_world_dharma_backend.Controllers
         public async Task<ActionResult<Like>> LikeLike(Like like)
         {
             var currentUser = GetCurrentUser();
+            if (currentUser.Banned)
+            {
+                return BadRequest("You're banned!");
+            }
             var query = await _context.Like
                .FirstOrDefaultAsync(item => item.PostId == like.PostId && item.UserId == currentUser.Id);
             if (query != null)
@@ -75,6 +79,10 @@ namespace knowledge_world_dharma_backend.Controllers
         public async Task<ActionResult<Like>> UnLike(int Id)
         {
             var currentUser = GetCurrentUser();
+            if (currentUser.Banned)
+            {
+                return BadRequest("You're banned!");
+            }
             var unLike = await _context.Like
                .FirstOrDefaultAsync(item => item.UserId == currentUser.Id && item.Id == Id);
             if (unLike == null)
@@ -94,7 +102,12 @@ namespace knowledge_world_dharma_backend.Controllers
             {
                 var userClaims = identity.Claims;
                 var Username = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value;
-                var Id = _context.UserModel.FirstOrDefault(u => u.Username == Username).Id;
+                var User = _context.UserModel.FirstOrDefault(u => u.Username == Username);
+
+                if (User == null)
+                {
+                    return null;
+                }
 
                 return new UserModel
                 {
@@ -103,7 +116,8 @@ namespace knowledge_world_dharma_backend.Controllers
                     GivenName = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.GivenName)?.Value,
                     Surname = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Surname)?.Value,
                     Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value,
-                    Id = Id
+                    Id = User.Id,
+                    Banned = User.Banned
                 };
             }
             return null;

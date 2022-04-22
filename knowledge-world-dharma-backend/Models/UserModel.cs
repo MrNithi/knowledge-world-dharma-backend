@@ -9,5 +9,6 @@
         public string Role { get; set; }
         public string Surname { get; set; }
         public string GivenName { get; set; }
+        public bool Banned { get; set; }
     }
 }

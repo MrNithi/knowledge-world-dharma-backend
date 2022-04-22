@@ -107,6 +107,11 @@ namespace knowledge_world_dharma_backend.Controllers
         public async Task<ActionResult<Post>> CreatePost(Post post)
         {
             var currentUser = GetCurrentUser();
+
+            if (currentUser.Banned)
+            {
+                return BadRequest("You're banned!");
+            }
             post.UserId = currentUser.Id;
             _context.Post.Add(post);
             await _context.SaveChangesAsync();
@@ -121,6 +126,10 @@ namespace knowledge_world_dharma_backend.Controllers
         {
             var currentUser = GetCurrentUser();
             var ExistedPost = await _context.Post.FindAsync(id);
+            if (currentUser.Banned)
+            {
+                return BadRequest("You're banned!");
+            }
             if (!(currentUser.Id == ExistedPost.UserId || currentUser.Role == "Admin"))
             {
                 return BadRequest("Not your post!");
@@ -188,6 +197,10 @@ namespace knowledge_world_dharma_backend.Controllers
             }
 
             var currentUser = GetCurrentUser();
+            if (currentUser.Banned)
+            {
+                return BadRequest("You're banned!");
+            }
             if (post.UserId == currentUser.Id || currentUser.Role == "Admin")
             {
                 _context.Post.Remove(post);
@@ -228,7 +241,12 @@ namespace knowledge_world_dharma_backend.Controllers
             {
                 var userClaims = identity.Claims;
                 var Username = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value;
-                var Id = _context.UserModel.FirstOrDefault(u => u.Username == Username).Id;
+                var User = _context.UserModel.FirstOrDefault(u => u.Username == Username);
+
+                if (User == null)
+                {
+                    return null;
+                }
 
                 return new UserModel
                 {
@@ -237,7 +255,8 @@ namespace knowledge_world_dharma_backend.Controllers
                     GivenName = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.GivenName)?.Value,
                     Surname = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Surname)?.Value,
                     Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value,
-                    Id = Id
+                    Id = User.Id,
+                    Banned = User.Banned
                 };
             }
             return null;

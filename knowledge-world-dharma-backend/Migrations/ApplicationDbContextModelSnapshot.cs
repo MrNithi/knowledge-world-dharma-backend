@@ -280,6 +280,9 @@ namespace knowledge_world_dharma_backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("Banned")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("EmailAddress")
                         .HasColumnType("TEXT");
 

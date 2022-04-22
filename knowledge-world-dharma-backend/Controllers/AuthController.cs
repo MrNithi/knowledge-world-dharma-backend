@@ -47,7 +47,8 @@ namespace knowledge_world_dharma_backend.Controllers
                     EachUser.EmailAddress,
                     EachUser.Role,
                     EachUser.GivenName,
-                    EachUser.Surname
+                    EachUser.Surname,
+                    EachUser.Banned
                 });
             }
 
@@ -56,9 +57,10 @@ namespace knowledge_world_dharma_backend.Controllers
         // GET /auth/profile
         [Authorize]
         [HttpGet]
-        public IActionResult Profile()
+        public async Task<IActionResult> Profile()
         {
             var currentUser = GetCurrentUser();
+            var StoredUser = await _context.UserModel.FindAsync(currentUser.Id);
 
             if (currentUser != null)
             {
@@ -69,7 +71,8 @@ namespace knowledge_world_dharma_backend.Controllers
                     currentUser.EmailAddress,
                     currentUser.Role,
                     currentUser.GivenName,
-                    currentUser.Surname
+                    currentUser.Surname,
+                    StoredUser.Banned
                 });
             }
 
@@ -145,9 +148,39 @@ namespace knowledge_world_dharma_backend.Controllers
 
             if (CandidateUser != null)
             {
-                CandidateUser.Role = "Admin";
+                
+                if (CandidateUser.Role == "Admin")
+                {
+                    CandidateUser.Role = "User";
+                } else
+                {
+                    CandidateUser.Role = "Admin";
+                }
                 await _context.SaveChangesAsync();
-                return Ok("User " + CandidateUser.Username + " is setted as Admin!");
+                return Ok("User " + CandidateUser.Username + " is setted as " + CandidateUser.Role + "!");
+            }
+
+            return NotFound("User not found");
+        }
+
+        // PUT /auth/ban
+        [Authorize]
+        [HttpPut("{UserId}")]
+        public async Task<IActionResult> Ban(int UserId)
+        {
+            var CurrentUser = GetCurrentUser();
+            var CandidateUser = await _context.UserModel.FindAsync(UserId);
+
+            if (CurrentUser.Role != "Admin")
+            {
+                return NotFound("You have no right!");
+            }
+
+            if (CandidateUser != null)
+            {
+                CandidateUser.Banned = !CandidateUser.Banned;
+                await _context.SaveChangesAsync();
+                return Ok("User " + CandidateUser.Username + " ban status is setted as " + CandidateUser.Banned + "!");
             }
 
             return NotFound("User not found");
@@ -249,7 +282,8 @@ namespace knowledge_world_dharma_backend.Controllers
                     GivenName = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.GivenName)?.Value,
                     Surname = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Surname)?.Value,
                     Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value,
-                    Id = User.Id
+                    Id = User.Id,
+                    Banned = User.Banned
                 };
             }
             return null;
