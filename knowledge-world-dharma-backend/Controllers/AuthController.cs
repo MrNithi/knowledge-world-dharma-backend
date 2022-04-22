@@ -29,21 +29,54 @@ namespace knowledge_world_dharma_backend.Controllers
             _config = config;
         }
 
+        // GET /auth/profiles
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<ActionResult> Profiles()
+        {
+            // Query for Post
+            var Users = await _context.UserModel.ToListAsync();
+            List<object> Res = new List<object>();
+
+            foreach (UserModel EachUser in Users)
+            {
+                Res.Add(new
+                {
+                    EachUser.Id,
+                    EachUser.Username,
+                    EachUser.EmailAddress,
+                    EachUser.Role,
+                    EachUser.GivenName,
+                    EachUser.Surname,
+                    EachUser.Banned
+                });
+            }
+
+            return Ok(Res);
+        }
         // GET /auth/profile
         [Authorize]
         [HttpGet]
-        public IActionResult Profile()
+        public async Task<IActionResult> Profile()
         {
             var currentUser = GetCurrentUser();
+            var StoredUser = await _context.UserModel.FindAsync(currentUser.Id);
 
-            return Ok(new
+            if (currentUser != null)
             {
+                return Ok(new
+                {
+                    currentUser.Id,
                     currentUser.Username,
                     currentUser.EmailAddress,
                     currentUser.Role,
                     currentUser.GivenName,
-                    currentUser.Surname
-            });
+                    currentUser.Surname,
+                    StoredUser.Banned
+                });
+            }
+
+            return NotFound("No User with this ID!");
         }
 
         // POST /auth/login
@@ -87,7 +120,7 @@ namespace knowledge_world_dharma_backend.Controllers
                 EmailAddress = userModel.EmailAddress,
                 Username = userModel.Username,
                 Password = sha256(userModel.Password),
-                Role = "user", // Default
+                Role = "User", // Default
                 GivenName = userModel.GivenName,
                 Surname = userModel.Surname
             };
@@ -97,6 +130,98 @@ namespace knowledge_world_dharma_backend.Controllers
             var token = Generate(storedUser);
 
             return CreatedAtAction("Token", token);
+        }
+
+        // PUT /auth/setAdmin
+        [Authorize]
+        [HttpPut("{UserId}")]
+        public async Task<IActionResult> SetAdmin(int UserId)
+        {
+            var CurrentUser = GetCurrentUser();
+            var CandidateUser = await _context.UserModel.FindAsync(UserId);
+            
+            if (CurrentUser.Role != "Admin")
+            {
+                return NotFound("You have no right!");
+            }
+            
+
+            if (CandidateUser != null)
+            {
+                
+                if (CandidateUser.Role == "Admin")
+                {
+                    CandidateUser.Role = "User";
+                } else
+                {
+                    CandidateUser.Role = "Admin";
+                }
+                await _context.SaveChangesAsync();
+                return Ok("User " + CandidateUser.Username + " is setted as " + CandidateUser.Role + "!");
+            }
+
+            return NotFound("User not found");
+        }
+
+        // PUT /auth/ban
+        [Authorize]
+        [HttpPut("{UserId}")]
+        public async Task<IActionResult> Ban(int UserId)
+        {
+            var CurrentUser = GetCurrentUser();
+            var CandidateUser = await _context.UserModel.FindAsync(UserId);
+
+            if (CurrentUser.Role != "Admin")
+            {
+                return NotFound("You have no right!");
+            }
+
+            if (CandidateUser != null)
+            {
+                CandidateUser.Banned = !CandidateUser.Banned;
+                await _context.SaveChangesAsync();
+                return Ok("User " + CandidateUser.Username + " ban status is setted as " + CandidateUser.Banned + "!");
+            }
+
+            return NotFound("User not found");
+        }
+
+        // DELETE: /auth/unregister
+        [HttpDelete]
+        [Authorize]
+        public async Task<ActionResult<Like>> Unregister()
+        {
+            var currentUser = GetCurrentUser();
+            var StoredUser = await _context.UserModel
+               .FirstOrDefaultAsync(item => item.Id == currentUser.Id);
+            if (StoredUser == null)
+            {
+                return NotFound();
+            }
+            _context.UserModel.Remove(StoredUser);
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
+
+        // DELETE: /auth/banish/:id
+        [HttpDelete("{id}")]
+        [Authorize]
+        public async Task<ActionResult> Banish(int Id)
+        {
+            var currentUser = GetCurrentUser();
+            if (currentUser.Role != "Admin")
+            {
+                return BadRequest("You're not admin!");
+            }
+            var StoredUser = await _context.UserModel
+               .FirstOrDefaultAsync(item => item.Id == Id);
+            if (StoredUser == null)
+            {
+                return NotFound();
+            }
+            _context.UserModel.Remove(StoredUser);
+            await _context.SaveChangesAsync();
+            return Ok();
         }
 
         private string Generate(UserModel user)
@@ -143,7 +268,12 @@ namespace knowledge_world_dharma_backend.Controllers
             {
                 var userClaims = identity.Claims;
                 var Username = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value;
-                var Id = _context.UserModel.FirstOrDefault(u => u.Username == Username).Id;
+                var User = _context.UserModel.FirstOrDefault(u => u.Username == Username);
+
+                if (User == null)
+                {
+                    return null;
+                }
 
                 return new UserModel
                 {
@@ -152,7 +282,8 @@ namespace knowledge_world_dharma_backend.Controllers
                     GivenName = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.GivenName)?.Value,
                     Surname = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Surname)?.Value,
                     Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value,
-                    Id = Id
+                    Id = User.Id,
+                    Banned = User.Banned
                 };
             }
             return null;

@@ -45,12 +45,28 @@ namespace knowledge_world_dharma_backend.Controllers
                             where (comment.Ref == EachPost.Id)
                             select comment;
                 var Comments = await QueryComments.ToListAsync();
+                var Owner = await _context.UserModel.FindAsync(EachPost.UserId);
 
-                Res.Add((new {
-                    Post = EachPost,
-                    Comments,
-                    PostLikes
-                }));
+                if (Owner != null)
+                {
+                    Res.Add((new
+                    {
+                        Post = EachPost,
+                        Owner = Owner.Username,
+                        Comments,
+                        PostLikes
+                    }));
+                } else
+                {
+                    Res.Add((new
+                    {
+                        Post = EachPost,
+                        Comments,
+                        PostLikes
+                    }));
+                }
+
+                
             }
             return Ok(Res);
         }
@@ -69,6 +85,7 @@ namespace knowledge_world_dharma_backend.Controllers
                                 where (comment.Ref == Post.Id)
                                 select comment;
             var Comments = await QueryComments.ToListAsync();
+            var Owner = await _context.UserModel.FindAsync(Post.UserId);
 
             if (Post == null) 
             {
@@ -79,36 +96,74 @@ namespace knowledge_world_dharma_backend.Controllers
             {
                 Post,
                 Comments,
-                PostLikes
+                Owner = Owner.Username,
+                Reacts = PostLikes
             });
         }
 
-        // POST: api/PostApi
+        // POST: api/post
         [HttpPost]
         [Authorize]
         public async Task<ActionResult<Post>> CreatePost(Post post)
         {
             var currentUser = GetCurrentUser();
-            post.UserId = currentUser.Id;
-            //_context.Post.Add(post);
-            //await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetPost", currentUser);
+            if (currentUser.Banned)
+            {
+                return BadRequest("You're banned!");
+            }
+            post.UserId = currentUser.Id;
+            _context.Post.Add(post);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("CreatePost", post);
         }
 
-        // PUT: api/post/5
+        // PUT: api/post/:id
         [HttpPut("{id}")]
         [Authorize]
-        public async Task<IActionResult> PutPost(int id, Post post)
+        public async Task<IActionResult> PutPost(int id, PostForm post)
         {
             var currentUser = GetCurrentUser();
-            // This is weird prob need check later
-            if (id != post.Id || post.Ref != 0 || currentUser.Id != post.UserId)
+            var ExistedPost = await _context.Post.FindAsync(id);
+            if (currentUser.Banned)
             {
-                return BadRequest();
+                return BadRequest("You're banned!");
+            }
+            if (!(currentUser.Id == ExistedPost.UserId || currentUser.Role == "Admin"))
+            {
+                return BadRequest("Not your post!");
             }
 
-            _context.Entry(post).State = EntityState.Modified;
+            if (ExistedPost != null)
+            {
+                if (currentUser.Id == ExistedPost.UserId)
+                {
+                    if (post.Title != null)
+                    {
+                        ExistedPost.Title = post.Title;
+                    }
+                    if (post.Content != null)
+                    {
+                        ExistedPost.Content = post.Content;
+                    }
+                    if (post.HashTag != null)
+                    {
+                        ExistedPost.HashTag = post.HashTag;
+                    }
+                }
+                
+                if (post.HideStatus != 0)
+                {
+                    if (post.HideStatus == -1)
+                    {
+                        ExistedPost.HideStatus = false;
+                    } else
+                    {
+                        ExistedPost.HideStatus = true;
+                    }
+                } 
+            }
 
             try
             {
@@ -126,44 +181,51 @@ namespace knowledge_world_dharma_backend.Controllers
                 }
             }
 
-            return Ok();
+            return Ok(ExistedPost);
         }
 
-        // DELETE: api/PostApi/5
+        // DELETE: api/post/:id
         [HttpDelete("{id}")]
         [Authorize]
-        public async Task<ActionResult<Post>> DeletePost(int id)
+        public async Task<IActionResult> DeletePost(int id)
         {
             var post = await _context.Post.FindAsync(id);
-            var currentUser = GetCurrentUser();
-            if (post.UserId == currentUser.Id)
+
+            if (post == null)
             {
-                var Comment = from b in _context.Post
+                return NotFound();
+            }
+
+            var currentUser = GetCurrentUser();
+            if (currentUser.Banned)
+            {
+                return BadRequest("You're banned!");
+            }
+            if (post.UserId == currentUser.Id || currentUser.Role == "Admin")
+            {
+                _context.Post.Remove(post);
+                var QueryComments = from b in _context.Post
                               where (b.Ref == id)
                               select b;
-                var Comments = await Comment.ToListAsync();
-                var Like = from b in _context.Like
+                var Comments = await QueryComments.ToListAsync();
+                var QueryLikes = from b in _context.Like
                            where (b.PostId == id)
                            select b;
-                var Likes = await Like.ToListAsync();
-                if (post == null)
-                {
-                    return NotFound();
-                }
+                var Likes = await QueryLikes.ToListAsync();
 
-                _context.Post.Remove(post);
-                foreach (Post aPost in Comments)
+                foreach (Post EachComment in Comments)
                 {
-                    _context.Post.Remove(aPost);
+                    _context.Post.Remove(EachComment);
                 }
-                foreach (Like aLike in Likes)
+                foreach (Like EachLike in Likes)
                 {
-                    _context.Like.Remove(aLike);
+                    _context.Like.Remove(EachLike);
                 }
                 await _context.SaveChangesAsync();
 
-                return post;
+                return Ok(post);
             }
+
             return BadRequest("Not your post!");
         }
         private bool PostExists(int id)
@@ -179,7 +241,12 @@ namespace knowledge_world_dharma_backend.Controllers
             {
                 var userClaims = identity.Claims;
                 var Username = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value;
-                var Id = _context.UserModel.FirstOrDefault(u => u.Username == Username).Id;
+                var User = _context.UserModel.FirstOrDefault(u => u.Username == Username);
+
+                if (User == null)
+                {
+                    return null;
+                }
 
                 return new UserModel
                 {
@@ -188,7 +255,8 @@ namespace knowledge_world_dharma_backend.Controllers
                     GivenName = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.GivenName)?.Value,
                     Surname = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Surname)?.Value,
                     Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value,
-                    Id = Id
+                    Id = User.Id,
+                    Banned = User.Banned
                 };
             }
             return null;

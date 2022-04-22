@@ -14,24 +14,27 @@ namespace knowledge_world_dharma_backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class LikeApiController : ControllerBase
+    public class LikeController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
 
-        public LikeApiController(ApplicationDbContext context)
+        public LikeController(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        // GET: api/PostApi
+        // GET: api/like
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Like>>> GetLike()
+        [AllowAnonymous]
+        public async Task<ActionResult<IEnumerable<Like>>> GetLikes()
         {
             return await _context.Like.ToListAsync();
         }
 
-        // GET: api/PostApi/5
+        // GET: api/like/:id
+        // get like of post with id
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<ActionResult<Like>> GetLike(int id)
         {
             var data = from item in _context.Like where (item.PostId == id) select item;
@@ -43,31 +46,45 @@ namespace knowledge_world_dharma_backend.Controllers
             return Ok(likes);
         }
 
-        // POST: api/
+        // POST: api/like
         [Authorize]
         [HttpPost]
         public async Task<ActionResult<Like>> LikeLike(Like like)
         {
             var currentUser = GetCurrentUser();
+            if (currentUser.Banned)
+            {
+                return BadRequest("You're banned!");
+            }
             var query = await _context.Like
                .FirstOrDefaultAsync(item => item.PostId == like.PostId && item.UserId == currentUser.Id);
             if (query != null)
             {
                 return BadRequest();
             }
-            _context.Like.Add(like);
+            var NewLike = new Like
+            {
+                PostId = like.PostId,
+                Emoji = like.Emoji,
+                UserId = currentUser.Id,
+            };
+            _context.Like.Add(NewLike);
             await _context.SaveChangesAsync();
             return CreatedAtAction("GetPost", new { id = like.Id }, like);
         }
 
         // DELETE: api/PostApi/5
-        [HttpDelete]
+        [HttpDelete("{id}")]
         [Authorize]
-        public async Task<ActionResult<Like>> UnLike(Like like)
+        public async Task<ActionResult<Like>> UnLike(int Id)
         {
             var currentUser = GetCurrentUser();
+            if (currentUser.Banned)
+            {
+                return BadRequest("You're banned!");
+            }
             var unLike = await _context.Like
-               .FirstOrDefaultAsync(item => item.PostId == like.PostId && item.UserId == currentUser.Id);
+               .FirstOrDefaultAsync(item => item.UserId == currentUser.Id && item.Id == Id);
             if (unLike == null)
             {
                 return NotFound();
@@ -84,6 +101,13 @@ namespace knowledge_world_dharma_backend.Controllers
             if (identity != null)
             {
                 var userClaims = identity.Claims;
+                var Username = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value;
+                var User = _context.UserModel.FirstOrDefault(u => u.Username == Username);
+
+                if (User == null)
+                {
+                    return null;
+                }
 
                 return new UserModel
                 {
@@ -91,7 +115,9 @@ namespace knowledge_world_dharma_backend.Controllers
                     EmailAddress = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Email)?.Value,
                     GivenName = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.GivenName)?.Value,
                     Surname = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Surname)?.Value,
-                    Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value
+                    Role = userClaims.FirstOrDefault(o => o.Type == ClaimTypes.Role)?.Value,
+                    Id = User.Id,
+                    Banned = User.Banned
                 };
             }
             return null;

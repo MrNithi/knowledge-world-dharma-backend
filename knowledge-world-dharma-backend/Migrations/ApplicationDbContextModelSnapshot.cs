@@ -208,6 +208,23 @@ namespace knowledge_world_dharma_backend.Migrations
                     b.ToTable("AspNetUserTokens");
                 });
 
+            modelBuilder.Entity("knowledge_world_dharma_backend.Models.Annoucement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Admin")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Post")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Annoucement");
+                });
+
             modelBuilder.Entity("knowledge_world_dharma_backend.Models.Like", b =>
                 {
                     b.Property<int>("Id")
@@ -261,6 +278,9 @@ namespace knowledge_world_dharma_backend.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Banned")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("EmailAddress")
