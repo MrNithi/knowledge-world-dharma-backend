@@ -70,8 +70,8 @@ namespace knowledge_world_dharma_backend.Controllers
                     currentUser.Username,
                     currentUser.EmailAddress,
                     currentUser.Role,
-                    currentUser.GivenName,
-                    currentUser.Surname,
+                    StoredUser.GivenName,
+                    StoredUser.Surname,
                     StoredUser.Banned
                 });
             }
