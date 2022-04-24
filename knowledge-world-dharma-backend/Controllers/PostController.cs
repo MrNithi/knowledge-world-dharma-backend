@@ -45,6 +45,21 @@ namespace knowledge_world_dharma_backend.Controllers
                             where (comment.Ref == EachPost.Id)
                             select comment;
                 var Comments = await QueryComments.ToListAsync();
+                List<object> ResComments = new List<object>();
+                foreach(Post PostComment in Comments)
+                {
+                    var CommentOwner = await _context.UserModel.FindAsync(PostComment.UserId);
+                    var QueryCommentsLikes = from like in _context.Like
+                                     where (like.PostId == EachPost.Id)
+                                     select like;
+                    var CommentsLikes = await QueryCommentsLikes.ToListAsync();
+                    ResComments.Add((new
+                    {
+                        Post = PostComment,
+                        Owner = CommentOwner.Username,
+                        QueryCommentsLikes
+                    }));
+                }
                 var Owner = await _context.UserModel.FindAsync(EachPost.UserId);
 
                 if (Owner != null)
@@ -53,7 +68,7 @@ namespace knowledge_world_dharma_backend.Controllers
                     {
                         Post = EachPost,
                         Owner = Owner.Username,
-                        Comments,
+                        Comments=ResComments,
                         PostLikes
                     }));
                 } else
@@ -61,7 +76,7 @@ namespace knowledge_world_dharma_backend.Controllers
                     Res.Add((new
                     {
                         Post = EachPost,
-                        Comments,
+                        Comments=ResComments,
                         PostLikes
                     }));
                 }
@@ -85,6 +100,21 @@ namespace knowledge_world_dharma_backend.Controllers
                                 where (comment.Ref == Post.Id)
                                 select comment;
             var Comments = await QueryComments.ToListAsync();
+            List<object> ResComments = new List<object>();
+            foreach (Post PostComment in Comments)
+            {
+                var CommentOwner = await _context.UserModel.FindAsync(PostComment.UserId);
+                var QueryCommentsLikes = from like in _context.Like
+                                         where (like.PostId == Post.Id)
+                                         select like;
+                var CommentsLikes = await QueryCommentsLikes.ToListAsync();
+                ResComments.Add((new
+                {
+                    Post = PostComment,
+                    Owner = CommentOwner.Username,
+                    QueryCommentsLikes
+                }));
+            }
             var Owner = await _context.UserModel.FindAsync(Post.UserId);
 
             if (Post == null) 
@@ -95,7 +125,7 @@ namespace knowledge_world_dharma_backend.Controllers
             return Ok(new
             {
                 Post,
-                Comments,
+                Comments=ResComments,
                 Owner = Owner.Username,
                 Reacts = PostLikes
             });

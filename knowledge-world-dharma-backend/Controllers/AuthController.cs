@@ -70,8 +70,8 @@ namespace knowledge_world_dharma_backend.Controllers
                     currentUser.Username,
                     currentUser.EmailAddress,
                     currentUser.Role,
-                    currentUser.GivenName,
-                    currentUser.Surname,
+                    StoredUser.GivenName,
+                    StoredUser.Surname,
                     StoredUser.Banned
                 });
             }
@@ -130,6 +130,48 @@ namespace knowledge_world_dharma_backend.Controllers
             var token = Generate(storedUser);
 
             return CreatedAtAction("Token", token);
+        }
+
+        // PUT /auth/editProfile
+        [Authorize]
+        [HttpPut("{UserId}")]
+        public async Task<IActionResult> EditProfile(int UserId, UserForm UserData)
+        {
+            var CurrentUser = GetCurrentUser();
+            var StoredUser = await _context.UserModel.FindAsync(CurrentUser.Id);
+
+            if (CurrentUser.Id != UserId && CurrentUser.Role != "Admin") {
+                return BadRequest("No Permission!");
+            }
+
+            if (StoredUser != null)
+            {
+                if (UserData.Username != null)
+                {
+                    StoredUser.Username = UserData.Username;
+                }
+                if (UserData.EmailAddress != null)
+                {
+                    StoredUser.EmailAddress = UserData.EmailAddress;
+                }
+                if (UserData.GivenName != null)
+                {
+                    StoredUser.GivenName = UserData.GivenName;
+                }
+                if (UserData.Surname != null)
+                {
+                    StoredUser.Surname = UserData.Surname;
+                }
+                if (UserData.Password != null)
+                {
+                    StoredUser.Password = sha256(UserData.Password);
+                }
+
+                await _context.SaveChangesAsync();
+                return Ok("User data is saved!");
+            }
+
+            return NotFound();
         }
 
         // PUT /auth/setAdmin

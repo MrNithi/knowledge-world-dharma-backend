@@ -84,7 +84,7 @@ namespace knowledge_world_dharma_backend.Controllers
                 return BadRequest("You're banned!");
             }
             var unLike = await _context.Like
-               .FirstOrDefaultAsync(item => item.UserId == currentUser.Id && item.Id == Id);
+               .FirstOrDefaultAsync(item => item.UserId == currentUser.Id && item.PostId == Id);
             if (unLike == null)
             {
                 return NotFound();
